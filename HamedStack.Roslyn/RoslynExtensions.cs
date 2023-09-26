@@ -54,7 +54,7 @@ public static class RoslynExtensions
     public static string ToRoslynApi(this string source, bool useDefaultFormatting = true, bool openParenthesisOnNewLine = false
         , bool closingParenthesisOnNewLine = false, bool removeRedundantModifyingCalls = false, bool shortenCodeWithUsingStatic = false)
     {
-        var quoter = new Quoter()
+        var quoter = new Quoter
         {
             UseDefaultFormatting = useDefaultFormatting,
             ShortenCodeWithUsingStatic = shortenCodeWithUsingStatic,
@@ -484,69 +484,5 @@ public static class RoslynExtensions
         if (validationCriteria(symbol)) return;
         var diagnostic = Diagnostic.Create(diagnosticRule, symbol.Locations[0], symbol.Name);
         context.ReportDiagnostic(diagnostic);
-    }
-
-    /// <summary>
-    /// Runs the specified source generator on the input code and returns the generated syntax trees.
-    /// </summary>
-    /// <typeparam name="TGenerator">The type of source generator to run.</typeparam>
-    /// <param name="inputCode">The C# source code to process.</param>
-    /// <param name="diagnostics">Returns any diagnostics emitted during the generation process.</param>
-    /// <param name="additionalReferences">Optional additional metadata references to be used in the compilation.</param>
-    /// <returns>The collection of syntax trees after running the generator, including the input and generated ones.</returns>
-    public static IEnumerable<SyntaxTree> RunGenerator<TGenerator>(
-        this string inputCode,
-        out ImmutableArray<Diagnostic> diagnostics,
-        IEnumerable<MetadataReference>? additionalReferences = null)
-        where TGenerator : ISourceGenerator, new()
-    {
-        var parseOptions = new CSharpParseOptions(LanguageVersion.Latest
-            , kind: SourceCodeKind.Regular
-            , documentationMode: DocumentationMode.Parse
-            , preprocessorSymbols: new[] { "NULLABLE_ENABLE" }
-            );
-        var syntaxTree = CSharpSyntaxTree.ParseText(inputCode, parseOptions);
-
-        var references = new List<MetadataReference>
-        {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location)
-        };
-
-        if (additionalReferences != null)
-        {
-            references.AddRange(additionalReferences);
-        }
-
-        var compilation = CSharpCompilation.Create(
-            "TestAssembly",
-            new[] { syntaxTree },
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-
-        var generator = new TGenerator();
-        var driver = CSharpGeneratorDriver.Create(generator);
-
-        driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out diagnostics);
-
-        return outputCompilation.SyntaxTrees;
-    }
-
-    /// <summary>
-    /// Creates a metadata reference for an assembly located in the current runtime directory.
-    /// </summary>
-    /// <param name="assemblyName">The name of the assembly. If the ".dll" extension is omitted, it will be appended.</param>
-    /// <returns>A metadata reference for the specified assembly.</returns>
-    public static MetadataReference CreateFromRuntime(string assemblyName)
-    {
-        if (string.IsNullOrWhiteSpace(assemblyName))
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(assemblyName));
-
-        if (!assemblyName.EndsWith(".dll"))
-        {
-            assemblyName += ".dll";
-        }
-
-        var assemblyPath = Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), assemblyName);
-        return MetadataReference.CreateFromFile(assemblyPath);
     }
 }
