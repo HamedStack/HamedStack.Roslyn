@@ -1,4 +1,5 @@
-﻿// ReSharper disable UnusedType.Global
+﻿// ReSharper disable IdentifierTypo
+// ReSharper disable UnusedType.Global
 // ReSharper disable MemberCanBePrivate.Global
 // ReSharper disable UnusedMember.Global
 
@@ -14,7 +15,7 @@ namespace HamedStack.Roslyn;
 /// <summary>
 /// Provides utility methods for working with Roslyn and .NET assemblies.
 /// </summary>
-public class RoslynUtility
+public static class RoslynUtility
 {
     /// <summary>
     /// Gets the runtime directory where the .NET assemblies are located.

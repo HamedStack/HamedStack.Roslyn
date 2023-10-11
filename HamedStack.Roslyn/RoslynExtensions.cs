@@ -3,6 +3,7 @@
 // ReSharper disable UnusedType.Global
 
 using System.Collections.Immutable;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.CodeAnalysis;
@@ -484,5 +485,84 @@ public static class RoslynExtensions
         if (validationCriteria(symbol)) return;
         var diagnostic = Diagnostic.Create(diagnosticRule, symbol.Locations[0], symbol.Name);
         context.ReportDiagnostic(diagnostic);
+    }
+
+    /// <summary>
+    /// Retrieves all the namespace members of a given <see cref="INamespaceSymbol"/> recursively.
+    /// </summary>
+    /// <param name="namespaceSymbol">The <see cref="INamespaceSymbol"/> whose members are to be retrieved.</param>
+    /// <returns>An <see cref="IEnumerable{INamespaceSymbol}"/> containing all the namespace members of the given <see cref="INamespaceSymbol"/> recursively.</returns>
+    /// <remarks>
+    /// This method uses a recursive approach to fetch all the nested namespaces within the given namespace symbol.
+    /// </remarks>
+    public static IEnumerable<INamespaceSymbol> GetNamespaceMembersRecursively(this INamespaceSymbol namespaceSymbol)
+    {
+        foreach (var member in namespaceSymbol.GetNamespaceMembers())
+        {
+            yield return member;
+
+            foreach (var childNamespace in member.GetNamespaceMembersRecursively())
+            {
+                yield return childNamespace;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Converts an <see cref="INamedTypeSymbol"/> to its corresponding <see cref="Type"/> representation.
+    /// </summary>
+    /// <param name="symbol">The named type symbol.</param>
+    /// <returns>The <see cref="Type"/> representation of the symbol, or null if not found.</returns>
+    public static Type? ToSystemType(this INamedTypeSymbol symbol)
+    {
+        var assemblyName = symbol.ContainingAssembly.Name;
+        var assembly = Assembly.Load(assemblyName);
+        return assembly.GetType(symbol.ToDisplayString());
+    }
+
+    /// <summary>
+    /// Converts an <see cref="IPropertySymbol"/> to its corresponding <see cref="Type"/> representation.
+    /// </summary>
+    /// <param name="symbol">The property symbol.</param>
+    /// <returns>The <see cref="Type"/> representation of the symbol's type, or null if not found.</returns>
+    public static Type? ToSystemType(this IPropertySymbol symbol)
+    {
+        var containingType = symbol.ContainingType.ToSystemType();
+        var property = containingType?.GetProperty(symbol.Name);
+        return property?.PropertyType;
+    }
+
+    /// <summary>
+    /// Converts an <see cref="IFieldSymbol"/> to its corresponding <see cref="Type"/> representation.
+    /// </summary>
+    /// <param name="symbol">The field symbol.</param>
+    /// <returns>The <see cref="Type"/> representation of the symbol's type, or null if not found.</returns>
+    public static Type? ToSystemType(this IFieldSymbol symbol)
+    {
+        var containingType = symbol.ContainingType.ToSystemType();
+        var field = containingType?.GetField(symbol.Name);
+        return field?.FieldType;
+    }
+
+    /// <summary>
+    /// Converts an <see cref="IMethodSymbol"/> to its corresponding <see cref="MethodInfo"/> representation.
+    /// </summary>
+    /// <param name="symbol">The method symbol.</param>
+    /// <returns>The <see cref="MethodInfo"/> representation of the symbol, or null if not found.</returns>
+    public static MethodInfo? ToMethodInfo(this IMethodSymbol symbol)
+    {
+        var containingType = symbol.ContainingType.ToSystemType();
+        return containingType?.GetMethod(symbol.Name);
+    }
+
+    /// <summary>
+    /// Converts an <see cref="IEventSymbol"/> to its corresponding <see cref="EventInfo"/> representation.
+    /// </summary>
+    /// <param name="symbol">The event symbol.</param>
+    /// <returns>The <see cref="EventInfo"/> representation of the symbol, or null if not found.</returns>
+    public static EventInfo? ToEventInfo(this IEventSymbol symbol)
+    {
+        var containingType = symbol.ContainingType.ToSystemType();
+        return containingType?.GetEvent(symbol.Name);
     }
 }
